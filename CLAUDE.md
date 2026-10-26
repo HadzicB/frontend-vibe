@@ -1,18 +1,24 @@
 @AGENTS.md
 
+# VIBE project (read first)
+
+This is the **vibe** copy of the frontend, separate from `../frontend-part` (the hand-written learning project). `frontend-part` and `../backend-part` must stay untouched: never modify them from here. This project pairs with `../backend-vibe`.
+Purpose of this project and session: an experiment to see how far stating "documentation" (this file) alone brings the implementation. Keep this file accurate: it is the spec the work is driven from.
+
 # Project context
 
 Learning project: Next.js fullstack app. Developed ad hoc, no fixed roadmap.
-Backend is decided: a separate Node app in `../backend-part`, called with `fetch` from the Next server only (server components/actions), never from the browser, so it doesn't show in the browser Network tab and needs no CORS. Ask before adding backend-specific code.
+Backend is decided: a separate Node app in `../backend-vibe` (TypeScript, Express 5, port 8080), called with `fetch` from the Next server only (server components/actions), never from the browser, so it doesn't show in the browser Network tab and needs no CORS. Ask before adding backend-specific code.
 Current state: login and signup work end to end against the separate backend (`API_URL` in `.env.local`).
 - `services/auth/authService.ts` calls the backend `/login` and `/signup` with `fetch`.
 - `actions/auth/authActions.ts` validates input (`lib/validation/`), calls the service, and on login sets an httpOnly `session` cookie from the backend's `{ id, expiresAt }` (the cookie expiry follows the BE; sessions last 20 minutes).
 - Routes live in `app/(auth)/login` and `app/(auth)/signup`. Types are in `types/auth.ts`.
 - Logout: `logoutAction` calls the BE `/logout` (sends `Authorization: Bearer <id>`), deletes the cookie, redirects to `/login`.
 - `proxy.ts` (project root): optimistic check only, "does a `session` cookie exist?". Public routes list: `/login`, `/signup`, `/forgot-password`; everything else is protected by default. Matcher skips `api`, `_next/static`, `_next/image`, `favicon.ico`, `.png`. Has debug `console.log`s on redirects. I decided NOT to call the backend from the proxy.
-- Real session check: `getMe(sessionId)` in `authService.ts` calls BE `GET /me` (null on 401). `app/page.tsx` uses it and shows "Hello, <username>". If the BE rejects the session (fake/expired/logged out), the page redirects to `app/session-expired/route.ts`, which deletes the cookie and redirects to `/login` (without that, the proxy would bounce the user back to `/`: redirect loop).
+- Real session check: `getMe(sessionId)` in `authService.ts` calls BE `GET /users/me` (null on 401). `app/page.tsx` uses it and shows "Hello, <username>". If the BE rejects the session (fake/expired/logged out), the page redirects to `app/session-expired/route.ts`, which deletes the cookie and redirects to `/login` (without that, the proxy would bounce the user back to `/`: redirect loop).
 - `app/user/page.tsx` is a second protected page; it has the same `getMe` check as the home page (copy-pasted for now, to be replaced by the central helper below).
 - Dev runs with `next dev --experimental-https` (self-signed cert, `https://localhost:3000`). `API_URL` stays plain http to the BE.
+- Tests: Vitest (`pnpm test` runs `vitest run`). `services/auth/authService.test.ts` is an integration test: `login("dgb", "dgsg")` against the real BE (needs `../backend-vibe` running with Postgres) must return `null` (BE answers 401). It assumes no user `dgb` exists.
 
 ## Next steps (in order)
 
@@ -49,11 +55,11 @@ Current state: login and signup work end to end against the separate backend (`A
 
 # Decisions log
 
-Update this section as decisions get made (e.g. "BE is now a separate app at ../backend-part").
+Update this section as decisions get made (e.g. "BE is now a separate app at ../backend-vibe").
 
 - Goal: become confident enough to apply for full stack positions. Favor industry-standard patterns and explain how they come up in interviews.
-- Backend: separate Node + Express app (TypeScript), sibling folder `../backend-part`. `services/` in this app becomes `fetch` calls to its API.
-  - Update: for now the BE is plain JavaScript (ESM) with Node's built-in `http` and the `pg` driver. No Express or TypeScript yet; both may come later.
+- Backend: separate Node + Express app (TypeScript), sibling folder `../backend-vibe`. `services/` in this app becomes `fetch` calls to its API.
+  - Update: the vibe BE is now TypeScript on Express 5 (single server, port 8080) with the `pg` driver. No ORM yet.
 - Database: SQL with an ORM. I know schemas, keys and joins but need a refresher, so show the generated SQL and explain relational concepts. Proposed, not yet confirmed: Drizzle + PostgreSQL. Hosting/Docker setup is undecided, don't assume it.
   - Update: PostgreSQL 16 is confirmed and running locally, currently with raw `pg` (no ORM yet). Docker deferred.
 - Next focus: authentication (login first, then sessions, route protection). Auth flow: backend verifies credentials and issues the token/session, Next.js keeps it in an httpOnly cookie.
