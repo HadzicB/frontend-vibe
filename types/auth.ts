@@ -6,6 +6,7 @@ export type Session = {
 export type SignupResult = {
   success: boolean;
   errors?: Record<string, string[]>; // field errors sent by the backend (400/409)
+  session?: Session; // signup logs the user in, so the backend returns a session
 };
 
 export type ActionState = {

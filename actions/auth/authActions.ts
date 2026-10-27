@@ -12,6 +12,18 @@ import { ActionState, Session } from "@/types/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+// Store the session ID in a cookie the browser sends back on every request
+async function setSessionCookie(session: Session) {
+  const cookieStore = await cookies();
+  cookieStore.set("session", session.id, {
+    httpOnly: true, // JavaScript in the browser cannot read it
+    secure: process.env.NODE_ENV === "production", // HTTPS only in production
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(session.expiresAt),
+  });
+}
+
 export async function loginAction(
   _prevState: ActionState,
   formData: FormData,
@@ -46,15 +58,7 @@ export async function loginAction(
     return { message: "Wrong email or password", values: { email, password } };
   }
 
-  // Store the session ID in a cookie the browser sends back on every request
-  const cookieStore = await cookies();
-  cookieStore.set("session", result.id, {
-    httpOnly: true, // JavaScript in the browser cannot read it
-    secure: process.env.NODE_ENV === "production", // HTTPS only in production
-    sameSite: "lax",
-    path: "/",
-    expires: new Date(result.expiresAt),
-  });
+  await setSessionCookie(result);
 
   console.log(result);
   redirect("/");
@@ -93,8 +97,12 @@ export async function signupAction(
     return { errors: result.errors, values: { email, password } };
   }
 
+  // Signup logs the user in (step 1 of 2). Step 2 is their address.
+  if (!result.session) redirect("/login");
+  await setSessionCookie(result.session);
+
   // redirect() throws internally, so it must be outside try/catch
-  redirect("/login");
+  redirect("/addresses/new");
 }
 
 export async function logoutAction() {

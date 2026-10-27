@@ -43,7 +43,10 @@ export async function signup(
     throw new ServiceUnavailableError("Backend unreachable");
   }
 
-  if (res.ok) return { success: true };
+  if (res.ok) {
+    const data = await res.json();
+    return { success: true, session: data.session };
+  }
 
   // 400 (validation) and 409 (email taken) carry field errors
   if (res.status === 400 || res.status === 409) {
