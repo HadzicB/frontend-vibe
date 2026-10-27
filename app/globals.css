@@ -24,3 +24,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animations for the weather blend scene (components/WeatherBlendScene.tsx).
+   Each element sets its own duration and delay inline, so nothing moves in step. */
+@keyframes wb-drift {
+  from { transform: translateX(-450px); }
+  to { transform: translateX(1250px); }
+}
+@keyframes wb-fall {
+  from { transform: translateY(-60px); }
+  to { transform: translateY(520px); }
+}
+@keyframes wb-snow {
+  from { transform: translate(0, -30px); }
+  to { transform: translate(40px, 520px); }
+}
+@keyframes wb-flash {
+  0%, 86%, 100% { opacity: 0; }
+  88% { opacity: 0.9; }
+  91% { opacity: 0.1; }
+  93% { opacity: 0.8; }
+  96% { opacity: 0; }
+}
+@keyframes wb-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.wb-anim {
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.wb-drift { animation-name: wb-drift; }
+.wb-fall { animation-name: wb-fall; }
+.wb-snow { animation-name: wb-snow; }
+.wb-flash { animation-name: wb-flash; animation-timing-function: step-end; }
+.wb-twinkle { animation-name: wb-twinkle; animation-timing-function: ease-in-out; }
+
+/* Visitors who asked for less motion get the same picture, standing still */
+@media (prefers-reduced-motion: reduce) {
+  .wb-anim { animation: none !important; }
+}

@@ -5,6 +5,22 @@
 This is the **vibe** copy of the frontend, separate from `../frontend-part` (the hand-written learning project). `frontend-part` and `../backend-part` must stay untouched: never modify them from here. This project pairs with `../backend-vibe`.
 Purpose of this project and session: an experiment to see how far stating "documentation" (this file) alone brings the implementation. Keep this file accurate: it is the spec the work is driven from.
 
+# App definition (the spec; build from this, do not widen it)
+
+**Weather for saved places.** A logged-in user saves places (Home, Work, Mum) and sees the forecast for each. The full spec, data model and endpoints are in `../backend-vibe/CLAUDE.md` ("App definition"). Keep the two in sync.
+
+Pages to build:
+- `/places`: the user's saved places. Add a place by typing a name, picking a result from a dropdown (never typing coordinates). Delete a place, mark one as default.
+- `/places/[id]`: the forecast for one place (current, next 24 hours, next 7 days), the "retrieved at" time, and the attribution "Weather data by Open-Meteo.com".
+- `/settings`: language and units preferences.
+- `/` shows the default place's forecast, or a prompt to add the first place.
+
+Rules:
+- The browser still never calls the backend. The place-search dropdown (type, wait about 300 ms, request) calls a Next **route handler** (`app/api/places/search/route.ts`, same origin), which calls the backend `GET /places/search` with the session cookie's ID. Use a route handler for typing, not a server action (server actions run one at a time).
+- `proxy.ts` skips `api` paths, so route handlers under `app/api/` are NOT protected by it: each one must read the `session` cookie itself and return 401 when it is missing or the backend rejects it.
+- Saving, deleting and settings are server actions. Forecast is requested by place id, never by coordinates.
+- Out of scope: map UI, shipping addresses, anonymous access.
+
 # Project context
 
 Learning project: Next.js fullstack app. Developed ad hoc, no fixed roadmap.
@@ -26,6 +42,7 @@ Current state: login and signup work end to end against the separate backend (`A
 2. (done) BE auth guard so every protected BE endpoint validates the session itself (see the backend CLAUDE.md). Error handling is aligned: `ServiceUnavailableError` for an unreachable BE in every service call, and `logout` treats a 401 as success.
 3. Central place for BE calls (small `fetch` wrapper, server-only): base URL, auth header, error mapping, and one spot that handles a 401 by redirecting to `/session-expired` (the route handler that deletes the cookie, because pages and render can't delete cookies). `getMe` is not special: it becomes a plain call through this wrapper.
 4. `verifySession()` in a data access layer (`lib/dal.ts`, `server-only`, wrapped in React `cache` so it runs once per render): the real-check counterpart of `proxy.ts`. Every page, action and BE data call goes through it, so no page copy-pastes a `getMe` block. Doc reference: "Creating a Data Access Layer (DAL)" in `node_modules/next/dist/docs/01-app/02-guides/authentication.md`.
+4b. App features from "App definition" come after steps 3 and 4 (wrapper + `verifySession()`), in the backend's order: places list/add/delete with search, forecast page, settings.
 5. Idea to evaluate (probably overkill for two separate repos): shared zod schemas used by both FE and BE so validation rules aren't written twice. Cheaper options: zod only in each repo with the same rules, or BE as the single source of truth and FE just shows its 400 field errors. A shared package only pays off in a monorepo (pnpm workspace).
 6. Interview topic, learn the concept (not necessarily implement): JWT vs server-side sessions. We use opaque session IDs looked up in the `sessions` table (stateful, instantly revocable). JWT is a signed token (`header.payload.signature`) the server can verify without a DB lookup (stateless), but it can't be revoked before expiry unless you add a denylist or short expiry + refresh token. Be ready to explain the trade-off, where to store each (httpOnly cookie vs localStorage), and why we chose sessions. Ask Claude for a short web-Claude prompt when ready.
 7. Later: forgot password; signup creating a session (auto-login); roles/permissions with a data access layer (separate, more complex topic); maybe move to a `src/` folder (`@/*` alias would change).

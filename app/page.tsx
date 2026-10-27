@@ -28,6 +28,9 @@ export default async function Home() {
         <Link href="/user" className="underline">
           User info
         </Link>
+        <Link href="/addresses" className="underline">
+          Addresses
+        </Link>
       </main>
     </>
   );
